@@ -1,0 +1,3391 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>以己为景-情绪面具沉浸式艺术展策划方案</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.7.1/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap');
+
+        /* 更新根变量 */
+        :root {
+            --primary-orange: #ff9500;
+            --primary-blue: #1a1ef9;
+            --background-dark: #000;
+            --text-color: #fff;
+            --gradient-primary: linear-gradient(45deg, var(--primary-orange), var(--primary-blue));
+            --shadow-glow: 0 0 20px rgba(255, 149, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 基础样式优化 */
+        body {
+            background-color: var(--background-dark);
+            color: var(--text-color);
+            font-family: 'Noto Serif SC', serif;
+            overflow: hidden;
+            line-height: 1.6;
+        }
+
+        .room {
+            position: fixed;
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+        }
+
+        .room.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .room-title {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            font-size: 2rem;
+            font-weight: bold;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.5s ease;
+        }
+
+        .room.active .room-title {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .room-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            opacity: 0;
+            transition: all 0.5s ease;
+        }
+        
+        /* 为情绪房间特别设置全屏内容 */
+        #emotion-room .room-content {
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            transform: none;
+        }
+
+        .room.active .room-content {
+            opacity: 1;
+        }
+
+        /* 导航栏优化 */
+        .room-nav {
+            position: fixed;
+            top: 50%;
+            right: 2rem;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            z-index: 1000;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-item {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .nav-item:hover .nav-canvas {
+            transform: scale(1.2);
+            border-color: var(--primary-orange);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .nav-item.active .nav-canvas {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 20px var(--primary-blue);
+        }
+
+        .nav-line {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 1px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--primary-orange), var(--primary-blue));
+            opacity: 0.3;
+            transform: translateX(-50%);
+        }
+
+        .nav-line::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--primary-orange), var(--primary-blue));
+            filter: blur(5px);
+            opacity: 0.5;
+        }
+
+        @keyframes navPulse {
+            0%, 100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.3;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+                opacity: 0.2;
+            }
+        }
+
+        @keyframes navGlow {
+            0%, 100% {
+                transform: translate(-50%, -50%) scale(1);
+                box-shadow: 0 0 20px var(--primary-blue);
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+                box-shadow: 0 0 30px var(--primary-blue);
+            }
+        }
+
+        .nav-point[data-room="infinity"] { top: 20%; left: 50%; }
+        .nav-point[data-room="bubble"] { top: 50%; left: 80%; }
+        .nav-point[data-room="nails"] { top: 80%; left: 50%; }
+        .nav-point[data-room="emotion"] { top: 50%; left: 20%; }
+        .nav-point[data-room="pendulum"] { top: 50%; left: 50%; }
+
+        .nav-line.active {
+            background: linear-gradient(90deg, var(--primary-orange), var(--primary-blue));
+            height: 2px;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+        }
+
+        .nav-line.active::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-orange), var(--primary-blue));
+            transform: translateY(-50%);
+            filter: blur(10px);
+            opacity: 0.5;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) translateX(0);
+                opacity: 0;
+            }
+            20% {
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(-100px) translateX(100px);
+                opacity: 0;
+            }
+        }
+
+        .nav-point:hover {
+            animation: float 2s ease-in-out infinite;
+        }
+
+        .nav-point.active {
+            animation: none;
+        }
+
+        /* 无限房间 */
+        .infinity-room {
+            background: linear-gradient(45deg, #000 0%, #1a1a1a 100%);
+        }
+
+        .infinity-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .infinity-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: grayscale(50%) contrast(120%);
+            clip-path: polygon(0 0, 100% 0, 100% 85%, 85% 100%, 0 100%);
+        }
+
+        .video-controls {
+            position: absolute;
+            bottom: 2rem;
+            right: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #fff;
+        }
+
+        .volume-slider {
+            width: 100px;
+            height: 4px;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .volume-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .volume-icon {
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+
+        .volume-icon:hover {
+            color: var(--primary-orange);
+        }
+
+        /* 泡泡房间 */
+        .bubble-room {
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* 泡泡产生点的视觉效果 */
+        .bubble-room::after {
+            content: '';
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, 
+                rgba(255, 255, 255, 0.4) 0%, 
+                rgba(255, 255, 255, 0.1) 60%, 
+                transparent 80%);
+            border-radius: 50%;
+            filter: blur(5px);
+            pointer-events: none;
+            animation: bubbleSource 3s infinite alternate;
+        }
+        
+        @keyframes bubbleSource {
+            0% {
+                opacity: 0.7;
+                transform: translateX(-50%) scale(0.8);
+            }
+            100% {
+                opacity: 0.9;
+                transform: translateX(-50%) scale(1.1);
+            }
+        }
+
+        .bubble {
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, 
+                rgba(255, 255, 255, 0.3), 
+                rgba(255, 255, 255, 0.05) 70%,
+                rgba(255, 255, 255, 0.02) 100%);
+            backdrop-filter: blur(3px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            overflow: hidden;
+            transition: all 0.5s ease;
+            transform: rotate(var(--rotation));
+            box-shadow: 
+                inset 0 0 15px rgba(255, 255, 255, 0.2),
+                inset 5px -5px 20px rgba(255, 255, 255, 0.1),
+                0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 添加泡泡反光效果 */
+        .bubble::before {
+            content: '';
+            position: absolute;
+            top: 10%;
+            left: 15%;
+            width: 20%;
+            height: 20%;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            filter: blur(3px);
+        }
+
+        .bubble::after {
+            content: '';
+            position: absolute;
+            top: 30%;
+            left: 25%;
+            width: 10%;
+            height: 10%;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            filter: blur(1px);
+        }
+
+        .bubble img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.8;
+            transition: opacity 0.5s ease, filter 0.5s ease;
+            filter: grayscale(20%) contrast(110%) brightness(0.9);
+            mix-blend-mode: soft-light;
+        }
+
+        .bubble:hover {
+            /* 只加视觉效果，不再直接transform，避免与GSAP冲突 */
+            z-index: 10;
+            box-shadow: 
+                inset 0 0 30px rgba(255, 255, 255, 0.3),
+                inset 10px -10px 30px rgba(255, 255, 255, 0.15),
+                0 8px 25px rgba(0, 0, 0, 0.4);
+            border-color: rgba(255, 255, 255, 0.6);
+            transition: box-shadow 0.3s, border-color 0.3s;
+        }
+
+        .bubble:hover img {
+            opacity: 1;
+            filter: grayscale(0%) contrast(110%) brightness(1.05);
+            mix-blend-mode: normal;
+        }
+
+        /* 钉子房间 */
+        .nails-room {
+            background: linear-gradient(45deg, #000 0%, #1a1a1a 100%);
+            overflow: hidden;
+        }
+
+        .image-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .main-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.3s ease;
+        }
+
+        .main-image:hover {
+            transform: scale(1.02);
+        }
+
+        /* 情绪房间 */
+        .emotion-room {
+            background: #000;
+        }
+
+        .emotion-dialog {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            border-radius: 0;
+            border: none;
+            backdrop-filter: none;
+            box-shadow: none;
+            overflow: hidden;
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .emotion-dialog-container {
+            display: none;
+            flex-direction: column;
+            padding: 3rem 4rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+            height: 100%;
+        }
+
+        .emotion-dialog-container.active {
+            display: flex;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .dialog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4rem;
+            border-bottom: none;
+            padding-bottom: 0;
+            position: relative;
+        }
+
+        .dialog-header h2 {
+            margin: 0;
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.9);
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .back-button {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 0.7rem 0;
+            border-radius: 0;
+            letter-spacing: 2px;
+        }
+
+        .back-button:hover {
+            background: transparent;
+            color: rgba(255, 255, 255, 0.9);
+            transform: translateX(-3px);
+        }
+
+        .dialog-content {
+            margin-bottom: 3rem;
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 1.3rem;
+            /* 对话框内容区样式增强 */
+            padding: 0;
+            background: transparent;
+            border-radius: 0;
+            border: none;
+            flex-grow: 1;
+            overflow-y: auto;
+            max-height: calc(100% - 200px);
+        }
+        
+        /* 对话气泡效果 - 极简版 */
+        .dialog-content p {
+            position: relative;
+            background: rgba(30, 30, 30, 0.15);
+            padding: 2.2rem 2.5rem;
+            border-radius: 0;
+            margin: 0;
+            box-shadow: none;
+            font-size: 1.6rem;
+            line-height: 1.7;
+            letter-spacing: 0.5px;
+        }
+
+        .dialog-options {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 1.2rem;
+            position: relative;
+            padding-top: 0.7rem;
+            margin-top: auto;
+        }
+        
+        /* 添加对话选项提示 - 更加轻量 */
+        .dialog-options::before {
+            content: '选择';
+            position: absolute;
+            top: -1.5rem;
+            left: 0;
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-weight: 300;
+        }
+
+        /* 添加点击波纹效果 */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            width: 10px;
+            height: 10px;
+            opacity: 0;
+        }
+
+        @keyframes ripple {
+            0% {
+                width: 0px;
+                height: 0px;
+                opacity: 0.5;
+            }
+            100% {
+                width: 150px;
+                height: 150px;
+                opacity: 0;
+            }
+        }
+
+        /* 对话选项悬停增强效果 */
+        .dialog-option {
+            padding: 2rem 0.5rem;
+            border: none;
+            border-radius: 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            /* 极简风格 */
+            box-shadow: none;
+            position: relative;
+            padding-left: 5.5rem;
+            margin-bottom: 0.5rem;
+            overflow: hidden; /* 确保波纹效果不会溢出 */
+        }
+
+        .dialog-option:hover {
+            background: rgba(255, 255, 255, 0.02);
+            transform: translateY(-1px);
+            box-shadow: none;
+        }
+
+        .dialog-option.selected {
+            background: linear-gradient(45deg, rgba(255, 149, 0, 0.07), rgba(78, 205, 196, 0.07));
+            box-shadow: none;
+        }
+
+        .option-icon {
+            font-size: 2.2rem;
+            position: absolute;
+            left: 1rem;
+            opacity: 0.9;
+        }
+
+        .option-text {
+            font-size: 1.3rem;
+            letter-spacing: 1px;
+            opacity: 0.9;
+        }
+
+        /* 修改结果动画样式 */
+        .result-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            opacity: 0;
+            transition: opacity 1s ease;
+            pointer-events: none;
+            visibility: hidden;
+        }
+
+        .result-animation.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* 调整结果界面的内容，使其显示在动画上方 */
+        #resultDialog {
+            position: relative;
+            z-index: 10; /* 确保对话框在动画上方 */
+        }
+        
+        #resultDialog .dialog-content {
+            position: relative;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(3px);
+            border-radius: 0;
+            box-shadow: none;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0;
+        }
+
+        #resultDialog .dialog-header,
+        #resultDialog .dialog-options {
+            position: relative;
+            z-index: 10;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        
+        #resultDialog .dialog-header h2 {
+            font-size: 3rem;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        #resultDialog .dialog-content p {
+            background: transparent;
+            padding: 3rem 1rem;
+            font-size: 1.7rem;
+            line-height: 1.8;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 添加头像图标 */
+        .dialog-avatar {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, var(--primary-orange), var(--primary-blue));
+            top: -25px;
+            left: 25px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            z-index: 10;
+        }
+
+        /* 增强情绪结果动画样式 */
+        .animation-workplace-real {
+            background: linear-gradient(135deg, #ff4b4b, #ff8f8f);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .animation-workplace-mask {
+            background: linear-gradient(135deg, #4b7bff, #8fb3ff);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .animation-relationship-real {
+            background: linear-gradient(135deg, #ff9500, #ffcc80);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .animation-relationship-mask {
+            background: linear-gradient(135deg, #7b1fa2, #ce93d8);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 新增宿舍场景动画样式 */
+        .animation-dorm-real {
+            background: linear-gradient(135deg, #e53935, #ff8a80);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .animation-dorm-mask {
+            background: linear-gradient(135deg, #43a047, #81c784);
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes fadeInBackground {
+            from { background-position: 0% 0%; }
+            to { background-position: 100% 100%; }
+        }
+
+        .animation-workplace-real::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.1),
+                rgba(255, 255, 255, 0.1) 10px,
+                rgba(255, 255, 255, 0.05) 10px,
+                rgba(255, 255, 255, 0.05) 20px
+            );
+            animation: movePattern 20s linear infinite;
+        }
+
+        .animation-workplace-real::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(
+                circle at center,
+                rgba(255, 255, 255, 0.2) 0%,
+                transparent 70%
+            );
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        .animation-workplace-mask::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path d="M0,50 L100,50 M50,0 L50,100" stroke="rgba(255,255,255,0.1)" stroke-width="2"/></svg>');
+            background-size: 50px 50px;
+            animation: rotate 30s linear infinite;
+        }
+
+        .animation-relationship-real::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(
+                circle at 50% 50%,
+                rgba(255, 255, 255, 0.3),
+                rgba(255, 255, 255, 0) 80%
+            );
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        .animation-relationship-real::after {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/></svg>');
+            background-size: 40px 40px;
+            animation: rotate 60s linear infinite;
+        }
+
+        .animation-relationship-mask::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to right,
+                rgba(255, 255, 255, 0.2),
+                rgba(255, 255, 255, 0) 60%
+            );
+            animation: sweep 4s ease-in-out infinite alternate;
+        }
+
+        .animation-dorm-real::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: repeating-radial-gradient(
+                circle at center,
+                rgba(255, 255, 255, 0.1) 0px,
+                rgba(255, 255, 255, 0.1) 10px,
+                rgba(255, 255, 255, 0) 10px,
+                rgba(255, 255, 255, 0) 20px
+            );
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .animation-dorm-real::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(
+                to right,
+                rgba(255, 255, 255, 0),
+                rgba(255, 255, 255, 0.5),
+                rgba(255, 255, 255, 0)
+            );
+            animation: scan 3s ease-in-out infinite;
+        }
+
+        .animation-dorm-mask::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><path d="M30,0 L60,30 L30,60 L0,30 Z" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/></svg>');
+            background-size: 60px 60px;
+            animation: rotate 40s linear infinite;
+        }
+
+        .animation-dorm-mask::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(
+                circle at center,
+                rgba(255, 255, 255, 0.2) 0%,
+                transparent 70%
+            );
+            animation: pulse 5s ease-in-out infinite;
+        }
+
+        /* 新增动画关键帧 */
+        @keyframes scan {
+            0% { top: 0; }
+            50% { top: 100%; }
+            100% { top: 0; }
+        }
+
+        @keyframes sweep {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes movePattern {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-50px, -50px); }
+        }
+
+        /* 增强粒子效果 */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            animation: float 10s linear infinite;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) translateX(0);
+                opacity: 0;
+            }
+            20% {
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(-100px) translateX(100px);
+                opacity: 0;
+            }
+        }
+
+        .explore-more {
+            text-align: center;
+            background: linear-gradient(45deg, rgba(255, 149, 0, 0.2), rgba(78, 205, 196, 0.2));
+            border: 1px solid var(--primary-blue);
+            justify-content: center;
+        }
+
+        .explore-more:hover {
+            background: linear-gradient(45deg, rgba(255, 149, 0, 0.4), rgba(78, 205, 196, 0.4));
+        }
+
+        /* 移除旧的情绪模态框样式 */
+        .emotion-modal {
+            display: none;
+        }
+
+        /* 钟摆房间 */
+        .pendulum-room {
+            background: linear-gradient(45deg, #000 0%, #1a1a1a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .pendulum-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pendulum {
+            position: relative;
+            width: 3px;
+            height: 600px;
+            background: linear-gradient(to bottom, 
+                rgba(255, 149, 0, 0.9),
+                rgba(78, 205, 196, 0.9));
+            transform-origin: top center;
+            animation: swing 4s ease-in-out infinite;
+            box-shadow: 
+                0 0 30px rgba(255, 149, 0, 0.3),
+                0 0 60px rgba(78, 205, 196, 0.2);
+            z-index: 2;
+        }
+
+        .pendulum-bob {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 240px;
+            height: 240px;
+            border-radius: 50%;
+            /* 3D立体效果 */
+            background: radial-gradient(circle at 70px 70px, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.2));
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 
+                0 0 60px rgba(255, 149, 0, 0.3),
+                inset 0 0 60px rgba(78, 205, 196, 0.4),
+                -20px 20px 60px rgba(0, 0, 0, 0.5); /* 增强立体感的阴影 */
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            z-index: 2;
+            /* 增加动画效果 */
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        .pendulum-text {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffffff;
+            text-shadow: 
+                0 0 20px rgba(255, 149, 0, 0.9),
+                0 0 40px rgba(78, 205, 196, 0.7),
+                0 0 10px rgba(0, 0, 0, 0.5);
+            font-weight: 500;
+            font-size: 3rem;
+            text-align: center;
+            letter-spacing: 10px;
+            line-height: 2;
+            width: 500px;
+            opacity: 1;
+            transition: all 0.5s ease;
+            z-index: 1;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .pendulum-desc {
+            position: absolute;
+            left: 50%;
+            bottom: 40px;
+            transform: translateX(-50%);
+            color: #ff9500;
+            font-size: 1.4rem;
+            letter-spacing: 4px;
+            text-align: center;
+            z-index: 1;
+            opacity: 0.85;
+            pointer-events: none;
+        }
+
+        @keyframes swing {
+            0% {
+                transform: rotate(-30deg);
+            }
+            50% {
+                transform: rotate(30deg);
+            }
+            100% {
+                transform: rotate(-30deg);
+            }
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes glow {
+            0%, 100% {
+                box-shadow: 
+                    0 0 60px rgba(255, 149, 0, 0.3),
+                    inset 0 0 60px rgba(78, 205, 196, 0.4),
+                    -20px 20px 60px rgba(0, 0, 0, 0.5);
+            }
+            50% {
+                box-shadow: 
+                    0 0 80px rgba(255, 149, 0, 0.5),
+                    inset 0 0 80px rgba(78, 205, 196, 0.6),
+                    -20px 20px 80px rgba(0, 0, 0, 0.6);
+            }
+        }
+
+        /* 首页样式 */
+        .home-page {
+            position: fixed;
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .home-page.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .home-canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1200px;
+            height: 1200px;
+            z-index: 1;
+        }
+
+        .home-content {
+            position: relative;
+            z-index: 2;
+            text-align: left;
+            color: #fff;
+            opacity: 0;
+            transform: translateX(20px);
+            transition: all 0.5s ease;
+            position: absolute;
+            bottom: 10%;
+            right: 10%;
+            transform: translateX(20px);
+            width: 400px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .home-page.active .home-content {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .home-title {
+            font-size: 3.5rem;
+            margin-bottom: 2rem;
+            letter-spacing: 6px;
+            background: linear-gradient(45deg, var(--primary-orange), var(--primary-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(78, 205, 196, 0.3);
+            line-height: 1.2;
+            position: relative;
+        }
+
+        .home-title::after {
+            content: '';
+            position: absolute;
+            bottom: -1rem;
+            left: 0;
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary-orange), var(--primary-blue));
+        }
+
+        .home-subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 3rem;
+            color: rgba(255, 255, 255, 0.8);
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            line-height: 1.8;
+            font-weight: 300;
+        }
+
+        .enter-button {
+            padding: 1rem 3rem;
+            font-size: 1.2rem;
+            color: #fff;
+            background: transparent;
+            border: 2px solid var(--primary-orange);
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(255, 107, 107, 0.2);
+            display: inline-block;
+        }
+
+        .enter-button::after {
+            content: '→';
+            margin-left: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .enter-button:hover {
+            background: var(--primary-orange);
+            transform: translateY(-2px);
+        }
+
+        .enter-button:hover::after {
+            transform: translateX(5px);
+        }
+
+        /* 绘画房间 */
+        .drawing-room {
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .drawing-canvas {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            background: var(--background-dark);
+            cursor: crosshair;
+        }
+
+        .drawing-controls {
+            position: relative;
+            margin: 2rem auto;
+            display: flex;
+            gap: 1rem;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 1rem;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+        }
+
+        .color-picker {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            background: none;
+            padding: 0;
+        }
+
+        .brush-size {
+            width: 100px;
+            height: 4px;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .brush-size::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .drawing-btn {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .drawing-btn:hover {
+            background: var(--primary-orange);
+            border-color: var(--primary-orange);
+        }
+
+        .saved-drawings {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+        }
+
+        .saved-drawing {
+            width: 100px;
+            height: 100px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .saved-drawing:hover {
+            transform: scale(1.1);
+            border-color: var(--primary-orange);
+        }
+
+        /* 小泡泡样式 */
+        .tiny-bubble {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, 
+                rgba(255, 255, 255, 0.5), 
+                rgba(255, 255, 255, 0.1) 70%);
+            opacity: 0.7;
+            backdrop-filter: blur(1px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            z-index: 1;
+            box-shadow: 
+                inset 0 0 5px rgba(255, 255, 255, 0.3),
+                0 0 5px rgba(255, 255, 255, 0.1);
+            pointer-events: none; /* 防止干扰交互 */
+        }
+        
+        /* 小泡泡反光效果 */
+        .tiny-bubble::before {
+            content: '';
+            position: absolute;
+            top: 20%;
+            left: 20%;
+            width: 30%;
+            height: 30%;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            filter: blur(1px);
+        }
+        
+        /* 空泡泡样式 */
+        .empty-bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, 
+                rgba(255, 255, 255, 0.05), 
+                rgba(255, 255, 255, 0.02) 50%, 
+                transparent 90%);
+            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
+            transition: all 0.5s ease;
+            opacity: 0.5;
+            pointer-events: none; /* 防止干扰交互 */
+        }
+        
+        /* 空泡泡反光效果 */
+        .empty-bubble::before {
+            content: '';
+            position: absolute;
+            top: 15%;
+            left: 15%;
+            width: 20%;
+            height: 20%;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            filter: blur(1px);
+        }
+        
+        /* 空泡泡彩虹边框效果 */
+        .empty-bubble.rainbow {
+            border: 1.5px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 
+                0 0 15px rgba(255, 255, 255, 0.2),
+                inset 0 0 15px rgba(255, 149, 0, 0.2);
+        }
+        
+        .empty-bubble.rainbow2 {
+            border: 1.5px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 
+                0 0 15px rgba(255, 255, 255, 0.2),
+                inset 0 0 15px rgba(78, 205, 196, 0.2);
+        }
+        
+        /* 空泡泡反光效果 */
+        .empty-bubble::after {
+            content: '';
+            position: absolute;
+            top: 25%;
+            left: 25%;
+            width: 10%;
+            height: 10%;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+        }
+
+        @keyframes navFloat {
+            0%, 100% {
+                transform: translate(-50%, -50%);
+            }
+            50% {
+                transform: translate(-50%, calc(-50% - 5px));
+            }
+        }
+
+        .nav-point:hover {
+            animation: navFloat 2s ease-in-out infinite;
+        }
+
+        /* 增加缺失的CSS动画样式 */
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(
+                circle at center,
+                rgba(255, 255, 255, 0.4) 0%,
+                rgba(255, 255, 255, 0.1) 70%
+            );
+            transform: translate(-50%, -50%);
+            animation: circle-expand 3s ease-out forwards;
+            pointer-events: none;
+        }
+
+        .wave-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, 0.1),
+                rgba(255, 255, 255, 0.05) 50%,
+                rgba(255, 255, 255, 0.1)
+            );
+            animation: wave 5s ease-in-out infinite alternate;
+        }
+
+        .scan-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(
+                to right,
+                rgba(255, 255, 255, 0.1),
+                rgba(255, 255, 255, 0.5),
+                rgba(255, 255, 255, 0.1)
+            );
+            animation: scan 3s ease-in-out infinite;
+        }
+
+        .particle-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        @keyframes circle-expand {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 0.7;
+            }
+            100% {
+                width: 200%;
+                height: 200%;
+                opacity: 0;
+            }
+        }
+
+        @keyframes wave {
+            0% {
+                transform: translateY(-30%) scaleY(1);
+            }
+            100% {
+                transform: translateY(30%) scaleY(1.2);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 首页 -->
+    <div class="home-page active">
+        <canvas class="home-canvas" id="home-canvas"></canvas>
+        <div class="home-content">
+            <h1 class="home-title">以己为景</h1>
+            <p class="home-subtitle">情绪面具沉浸式艺术展策划方案</p>
+            <button class="enter-button">进入展览</button>
+        </div>
+    </div>
+
+    <!-- 房间导航 -->
+    <nav class="room-nav">
+        <div class="nav-line"></div>
+        <div class="nav-item active" data-room="infinity">
+            <canvas class="nav-canvas" id="infinity-nav"></canvas>
+        </div>
+        <div class="nav-item" data-room="bubble">
+            <canvas class="nav-canvas" id="bubble-nav"></canvas>
+        </div>
+        <div class="nav-item" data-room="drawing">
+            <canvas class="nav-canvas" id="drawing-nav"></canvas>
+        </div>
+        <div class="nav-item" data-room="nails">
+            <canvas class="nav-canvas" id="nails-nav"></canvas>
+        </div>
+        <div class="nav-item" data-room="emotion">
+            <canvas class="nav-canvas" id="emotion-nav"></canvas>
+        </div>
+        <div class="nav-item" data-room="pendulum">
+            <canvas class="nav-canvas" id="pendulum-nav"></canvas>
+        </div>
+    </nav>
+
+    <!-- 无限房间 -->
+    <section id="infinity-room" class="room active">
+        <h2 class="room-title">无限</h2>
+        <div class="room-content infinity-content">
+            <video class="infinity-video" autoplay loop muted playsinline>
+                <source src="1.mp4" type="video/mp4">
+            </video>
+            <div class="video-controls">
+                <div class="volume-control">
+                    <span class="volume-icon">🔊</span>
+                    <input type="range" class="volume-slider" min="0" max="1" step="0.1" value="0.5">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 泡泡房间 -->
+    <section id="bubble-room" class="room">
+        <div class="room-content" id="bubbleGallery"></div>
+        <audio id="bubble-sound" preload="auto">
+            <source src="bubble.mp3" type="audio/mp3">
+            <!-- 如果没有bubble.mp3文件，将会静默失败 -->
+        </audio>
+    </section>
+
+    <!-- 钉子房间 -->
+    <section id="nails-room" class="room">
+        <div class="room-content">
+            <div class="image-container" id="nailsContainer"></div>
+        </div>
+    </section>
+
+    <!-- 情绪房间 -->
+    <section id="emotion-room" class="room">
+        <div class="room-content">
+            <div class="emotion-dialog" id="emotionDialog">
+                <div class="emotion-dialog-container active" id="mainDialog">
+                    <div class="dialog-header">
+                        <h2>情绪探索</h2>
+                </div>
+                    <div class="dialog-content">
+                        <p>在这个充满情绪的世界里，你想要探索什么？</p>
+            </div>
+                    <div class="dialog-options">
+                        <div class="dialog-option" data-scenario="workplace">
+                            <span class="option-icon">💼</span>
+                            <span class="option-text">社团活动冲突</span>
+                        </div>
+                        <div class="dialog-option" data-scenario="relationship">
+                            <span class="option-icon">📚</span>
+                            <span class="option-text">小组作业分歧</span>
+                        </div>
+                        <div class="dialog-option" data-scenario="dorm">
+                            <span class="option-icon">🏠</span>
+                            <span class="option-text">宿舍生活摩擦</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 职场情绪情景 -->
+                <div class="emotion-dialog-container" id="workplaceDialog">
+                    <div class="dialog-header">
+                        <h2>社团活动冲突</h2>
+                        <button class="back-button" data-target="mainDialog">返回</button>
+                    </div>
+                    <div class="dialog-content">
+                        <p>大学辩论队备战省级比赛，队长临时要求队员通宵修改辩稿。连续一周熬夜写作业和备赛，身体极度疲惫，对队长独断专行的安排感到愤怒又委屈，认为这样的高强度修改毫无意义，甚至想直接退出。这时你会：</p>
+                    </div>
+                    <div class="dialog-options">
+                        <div class="dialog-option" data-result="workplace-real">
+                            <span class="option-icon">😤</span>
+                            <span class="option-text">表达不满，坚持己见</span>
+                        </div>
+                        <div class="dialog-option" data-result="workplace-mask">
+                            <span class="option-icon">😊</span>
+                            <span class="option-text">笑着答应，积极配合</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 人际关系情景 -->
+                <div class="emotion-dialog-container" id="relationshipDialog">
+                    <div class="dialog-header">
+                        <h2>小组作业分歧</h2>
+                        <button class="back-button" data-target="mainDialog">返回</button>
+                    </div>
+                    <div class="dialog-content">
+                        <p>文学课小组作业，组员小张全程划水，汇报当天却抢着发言，还把功劳全揽在自己身上。你查阅大量资料、熬夜撰写报告，却被他人窃取成果，满心委屈和愤怒。这时你会：</p>
+                    </div>
+                    <div class="dialog-options">
+                        <div class="dialog-option" data-result="relationship-real">
+                            <span class="option-icon">🗣️</span>
+                            <span class="option-text">当场指出问题</span>
+                        </div>
+                        <div class="dialog-option" data-result="relationship-mask">
+                            <span class="option-icon">🤐</span>
+                            <span class="option-text">微笑鼓掌，保持沉默</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 宿舍生活情景 -->
+                <div class="emotion-dialog-container" id="dormDialog">
+                    <div class="dialog-header">
+                        <h2>宿舍生活摩擦</h2>
+                        <button class="back-button" data-target="mainDialog">返回</button>
+                    </div>
+                    <div class="dialog-content">
+                        <p>室友总是在大家休息时间大声打电话，多次提醒无果。某天深夜，室友又在宿舍兴奋聊天。你被吵得难以入睡，积压已久的不满瞬间爆发。这时你会：</p>
+                    </div>
+                    <div class="dialog-options">
+                        <div class="dialog-option" data-result="dorm-real">
+                            <span class="option-icon">😠</span>
+                            <span class="option-text">直接表达不满</span>
+                        </div>
+                        <div class="dialog-option" data-result="dorm-mask">
+                            <span class="option-icon">😌</span>
+                            <span class="option-text">轻声提醒，保持平和</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 结果动画背景 - 移到对话框外部，成为全屏背景 -->
+                <div id="result-animation" class="result-animation"></div>
+                
+                <!-- 结果显示区 -->
+                <div class="emotion-dialog-container" id="resultDialog">
+                    <div class="dialog-header">
+                        <h2 id="result-title">结果</h2>
+                        <button class="back-button" data-target="mainDialog">返回主页</button>
+                    </div>
+                    <div class="dialog-content">
+                        <p id="result-description"></p>
+                    </div>
+                    <div class="dialog-options">
+                        <div class="dialog-option explore-more" data-target="mainDialog">
+                            <span class="option-text">继续探索</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 情绪音效 -->
+            <audio id="emotion-sound-real" preload="auto">
+                <source src="assets/audio/emotion-real.mp3" type="audio/mp3">
+            </audio>
+            <audio id="emotion-sound-mask" preload="auto">
+                <source src="assets/audio/emotion-mask.mp3" type="audio/mp3">
+            </audio>
+        </div>
+    </section>
+
+    <!-- 钟摆房间 -->
+    <section id="pendulum-room" class="room">
+        <div class="room-content">
+            <div class="pendulum-container">
+                <div class="pendulum" id="pendulum">
+                    <div class="pendulum-bob"></div>
+                </div>
+                <div class="pendulum-text" id="pendulum-text">我很难过</div>
+            </div>
+        </div>
+        <audio id="pendulum-sound" src="tick.mp3" preload="auto"></audio>
+    </section>
+
+    <!-- 绘画房间 -->
+    <section id="drawing-room" class="room">
+        <div class="room-content">
+            <canvas class="drawing-canvas" id="drawing-canvas"></canvas>
+            <div class="drawing-controls">
+                <input type="color" class="color-picker" value="#ffffff">
+                <input type="range" class="brush-size" min="1" max="50" value="5">
+                <button class="drawing-btn" id="clear-btn">清除</button>
+                <button class="drawing-btn" id="save-btn">保存</button>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // 修改首页3D模型初始化代码
+        function initHomeModel() {
+            const canvas = document.getElementById('home-canvas');
+            if (!canvas) return;
+
+            // 创建场景
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+            
+            // 创建渲染器
+            const renderer = new THREE.WebGLRenderer({
+                canvas: canvas,
+                alpha: true,
+                antialias: true
+            });
+            renderer.setSize(1200, 1200);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // 创建环形结
+            const geometry = new THREE.TorusKnotGeometry(2.5, 0.5, 200, 32);
+            
+            // 创建渐变材质
+            const vertexShader = `
+                varying vec3 vPosition;
+                void main() {
+                    vPosition = position;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `;
+            
+            const fragmentShader = `
+                varying vec3 vPosition;
+                uniform vec3 colorA;
+                uniform vec3 colorB;
+                void main() {
+                    float t = (vPosition.y + 2.5) / 5.0;
+                    vec3 color = mix(colorA, colorB, t);
+                    gl_FragColor = vec4(color, 0.8);
+                }
+            `;
+
+            const material = new THREE.ShaderMaterial({
+                uniforms: {
+                    colorA: { value: new THREE.Color(0x4ECDC4) },
+                    colorB: { value: new THREE.Color(0xff9500) }
+                },
+                vertexShader: vertexShader,
+                fragmentShader: fragmentShader,
+                transparent: true,
+                wireframe: true
+            });
+
+            const torusKnot = new THREE.Mesh(geometry, material);
+            scene.add(torusKnot);
+
+            // 添加光源
+            const light = new THREE.PointLight(0xffffff, 1);
+            light.position.set(5, 5, 5);
+            scene.add(light);
+
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+
+            camera.position.z = 8;
+            camera.position.x = 0;
+
+            // 动画循环
+            let animationFrameId;
+            function animate() {
+                animationFrameId = requestAnimationFrame(animate);
+
+                if (torusKnot && material.uniforms) {
+                    torusKnot.rotation.x += 0.003;
+                    torusKnot.rotation.y += 0.003;
+
+                    // 更新渐变色的混合
+                    const time = Date.now() * 0.001;
+                    material.uniforms.colorA.value.setHSL(0.5 + Math.sin(time) * 0.1, 0.8, 0.5);
+                    material.uniforms.colorB.value.setHSL(0.1 + Math.sin(time) * 0.1, 0.8, 0.5);
+                }
+
+                renderer.render(scene, camera);
+            }
+
+            animate();
+
+            // 响应窗口大小变化
+            function onWindowResize() {
+                if (!canvas) return;
+                
+                const width = canvas.clientWidth;
+                const height = canvas.clientHeight;
+                
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(width, height);
+            }
+
+            window.addEventListener('resize', onWindowResize);
+
+            // 添加鼠标交互
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+
+            canvas.addEventListener('mousedown', (e) => {
+                isDragging = true;
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (isDragging && torusKnot) {
+                    const deltaMove = {
+                        x: e.offsetX - previousMousePosition.x,
+                        y: e.offsetY - previousMousePosition.y
+                    };
+
+                    torusKnot.rotation.y += deltaMove.x * 0.01;
+                    torusKnot.rotation.x += deltaMove.y * 0.01;
+                }
+
+                previousMousePosition = {
+                    x: e.offsetX,
+                    y: e.offsetY
+                };
+            });
+
+            canvas.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            // 清理函数
+            return () => {
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+                window.removeEventListener('resize', onWindowResize);
+                geometry.dispose();
+                material.dispose();
+                renderer.dispose();
+            };
+        }
+
+        // 修改3D导航模型初始化代码
+        function initNavModels() {
+            const navItems = document.querySelectorAll('.nav-item');
+            
+            navItems.forEach(item => {
+                const canvas = item.querySelector('canvas');
+                if (!canvas) return;
+                
+                const room = item.dataset.room;
+                
+                // 创建场景
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer({
+                    canvas: canvas,
+                    alpha: true,
+                    antialias: true
+                });
+                renderer.setSize(60, 60);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                
+                // 添加光源
+                const light = new THREE.PointLight(0xffffff, 1);
+                light.position.set(1, 1, 1);
+                scene.add(light);
+                
+                const ambientLight = new THREE.AmbientLight(0x404040);
+                scene.add(ambientLight);
+                
+                // 创建模型
+                const model = navModels[room].create(scene);
+                scene.add(model);
+                
+                camera.position.z = 2;
+                
+                // 动画循环
+                let animationFrameId;
+                function animate() {
+                    animationFrameId = requestAnimationFrame(animate);
+                    
+                    if (model) {
+                        model.rotation.x += 0.01;
+                        model.rotation.y += 0.01;
+                    }
+                    
+                    renderer.render(scene, camera);
+                }
+                
+                animate();
+                
+                // 添加交互效果
+                item.addEventListener('mouseenter', () => {
+                    if (model) {
+                        gsap.to(model.rotation, {
+                            x: model.rotation.x + Math.PI,
+                            y: model.rotation.y + Math.PI,
+                            duration: 1,
+                            ease: "power2.inOut"
+                        });
+                    }
+                });
+
+                // 清理函数
+                return () => {
+                    if (animationFrameId) {
+                        cancelAnimationFrame(animationFrameId);
+                    }
+                    if (model.geometry) model.geometry.dispose();
+                    if (model.material) model.material.dispose();
+                    renderer.dispose();
+                };
+            });
+        }
+
+        // 首页交互
+        const homePage = document.querySelector('.home-page');
+        const enterButton = document.querySelector('.enter-button');
+
+        enterButton.addEventListener('click', () => {
+            homePage.classList.remove('active');
+            setTimeout(() => {
+                homePage.classList.add('hidden');
+            }, 500);
+        });
+
+        // 房间切换
+        const rooms = document.querySelectorAll('.room');
+        const navItems = document.querySelectorAll('.nav-item');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const targetRoom = item.dataset.room;
+                
+                // 停止钟摆动画和音效
+                stopAnimation();
+                
+                // 更新导航项状态
+                navItems.forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                
+                // 切换房间
+                rooms.forEach(room => {
+                    room.classList.remove('active');
+                    if (room.id === `${targetRoom}-room`) {
+                        room.classList.add('active');
+                        
+                        // 如果是泡泡房间，重新创建泡泡
+                        if (targetRoom === 'bubble') {
+                            // 清除现有泡泡
+                            bubbleGallery.innerHTML = '';
+                            // 重新创建泡泡
+                            createBubbles();
+                            // 播放泡泡声音
+                            if (bubbleSound) {
+                                bubbleSound.currentTime = 0;
+                                bubbleSound.play().catch(e => {
+                                    console.log("泡泡音效播放失败:", e);
+                                });
+                            }
+                        }
+                        
+                        // 如果是钟摆房间，启动动画和音效
+                        if (targetRoom === 'pendulum') {
+                            startPendulum();
+                        }
+                    }
+                });
+            });
+        });
+
+        // 泡泡画廊
+        const bubbleGallery = document.getElementById('bubbleGallery');
+        const bubbleSound = document.getElementById('bubble-sound');
+        let bubblesInitialized = false;
+        const bubbleData = [
+            { image: '1.jpg' },
+            { image: '2.jpg' },
+            { image: '3.jpg' },
+            { image: '4.jpg' },
+            { image: '5.jpg' },
+            { image: '6.jpg' },
+            { image: '7.jpg' },
+            { image: '8.jpg' },
+            { image: '9.jpg' },
+            { image: '10.jpg' },
+            { image: '11.jpg' },
+            { image: '12.jpg' }
+        ];
+
+        // 初始化创建泡泡函数
+        function createBubbles() {
+            bubbleGallery.innerHTML = '';
+            
+            // 固定显示12个泡泡
+            const bubbleCount = 12;
+            
+            // 获取画廊容器的尺寸
+            const galleryRect = bubbleGallery.getBoundingClientRect();
+            const galleryWidth = galleryRect.width;
+            const galleryHeight = galleryRect.height;
+            
+            // 计算泡泡大小（保证不会太大）
+            const maxBubbleSize = Math.min(galleryWidth, galleryHeight) * 0.25;
+            
+            // 创建安全区域，防止泡泡太靠近边缘
+            const safeMargin = Math.max(40, maxBubbleSize / 2);
+            
+            // 已放置的泡泡中心点
+            const placedBubbles = [];
+            
+            // 定义泡泡产生的起始点（中心偏下的位置）
+            const sourceX = galleryWidth / 2;
+            const sourceY = galleryHeight * 0.8;
+            
+            // 创建主要泡泡
+            createMainBubbles(bubbleCount, galleryWidth, galleryHeight, maxBubbleSize, safeMargin, placedBubbles, sourceX, sourceY);
+            
+            // 创建空泡泡 (20-25个空泡泡)
+            const emptyBubbleCount = 20 + Math.floor(Math.random() * 6);
+            createEmptyBubbles(emptyBubbleCount, galleryWidth, galleryHeight, maxBubbleSize, safeMargin, placedBubbles, sourceX, sourceY);
+            
+            // 启动小泡泡生成器
+            startTinyBubbleGenerator(sourceX, sourceY);
+        }
+        
+        // 创建主要泡泡
+        function createMainBubbles(bubbleCount, galleryWidth, galleryHeight, maxBubbleSize, safeMargin, placedBubbles, sourceX, sourceY) {
+            // 创建泡泡
+            for (let i = 0; i < bubbleCount; i++) {
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                
+                // 更多随机化的泡泡大小
+                let bubbleSize;
+                const sizeRandom = Math.random();
+                
+                if (sizeRandom < 0.2) {
+                    // 20%的概率是大泡泡
+                    bubbleSize = Math.min(260, maxBubbleSize * 1.1);
+                } else if (sizeRandom < 0.5) {
+                    // 30%的概率是中等泡泡
+                    bubbleSize = Math.min(200, maxBubbleSize * 0.9);
+                } else if (sizeRandom < 0.8) {
+                    // 30%的概率是小泡泡
+                    bubbleSize = Math.min(160, maxBubbleSize * 0.7);
+                } else {
+                    // 20%的概率是微小泡泡
+                    bubbleSize = Math.min(120, maxBubbleSize * 0.5);
+                }
+                
+                // 添加轻微随机变化
+                bubbleSize = bubbleSize * (0.9 + Math.random() * 0.2);
+                bubbleSize = Math.round(bubbleSize);
+                
+                // 设置泡泡大小
+                bubble.style.width = `${bubbleSize}px`;
+                bubble.style.height = `${bubbleSize}px`;
+                
+                // 根据大小设置透明度 - 小泡泡更透明
+                const opacity = 0.65 + (bubbleSize / (maxBubbleSize * 1.1)) * 0.35;
+                bubble.style.opacity = "0"; // 初始透明度为0
+                
+                // 添加图片
+                const img = document.createElement('img');
+                const dataIndex = i % bubbleData.length; // 循环使用图片
+                img.src = bubbleData[dataIndex].image;
+                bubble.appendChild(img);
+                
+                // 尝试找到一个不重叠的位置
+                let attempts = 0;
+                let validPosition = false;
+                let x, y;
+                
+                // 最多尝试50次找位置
+                while (!validPosition && attempts < 50) {
+                    // 在安全区域内随机生成位置
+                    x = safeMargin + Math.random() * (galleryWidth - safeMargin * 2);
+                    y = safeMargin + Math.random() * (galleryHeight - safeMargin * 2);
+                    
+                    // 检查与已有泡泡的距离
+                    validPosition = true;
+                    
+                    // 最小允许的距离（泡泡直径的0.7倍）
+                    const minDistance = bubbleSize * 0.7;
+                    
+                    for (const placed of placedBubbles) {
+                        const distance = Math.sqrt(
+                            Math.pow(x - placed.x, 2) + 
+                            Math.pow(y - placed.y, 2)
+                        );
+                        
+                        // 如果距离太近，尝试新位置
+                        if (distance < minDistance + placed.size / 2) {
+                            validPosition = false;
+                            break;
+                        }
+                    }
+                    
+                    attempts++;
+                }
+                
+                // 如果找不到理想位置，就减少要求
+                if (!validPosition) {
+                    // 随机位置，不考虑重叠
+                    x = safeMargin + Math.random() * (galleryWidth - safeMargin * 2);
+                    y = safeMargin + Math.random() * (galleryHeight - safeMargin * 2);
+                }
+                
+                // 记录放置的泡泡
+                placedBubbles.push({
+                    x: x,
+                    y: y,
+                    size: bubbleSize
+                });
+                
+                // 泡泡的目标位置（最终位置）
+                const targetX = x - bubbleSize / 2;
+                const targetY = y - bubbleSize / 2;
+                
+                // 为了入场动画，设置初始位置为起始点
+                bubble.style.left = `${sourceX - bubbleSize / 2}px`;
+                bubble.style.top = `${sourceY - bubbleSize / 2}px`;
+                bubble.style.transform = "scale(0.2) rotate(0deg)"; // 初始时泡泡很小
+                
+                // 添加随机旋转
+                const rotation = (Math.random() * 40) - 20; // -20° 到 +20°
+                bubble.style.setProperty('--rotation', `${rotation}deg`);
+                
+                // 添加到画廊
+                bubbleGallery.appendChild(bubble);
+                
+                // 入场动画 - 从起点吹出到目标位置
+                const entryDelay = 0.1 + (i * 0.1) + (Math.random() * 0.2); // 错开每个泡泡的出现时间
+                const entryDuration = 1 + Math.random() * 1.5; // 1-2.5秒的入场时间
+                
+                // 使用GSAP动画库创建入场动画
+                gsap.to(bubble, {
+                    x: targetX - (sourceX - bubbleSize / 2), // 从起点到终点的x位移
+                    y: targetY - (sourceY - bubbleSize / 2), // 从起点到终点的y位移
+                    opacity: opacity,
+                    scale: 1,
+                    rotation: rotation,
+                    duration: entryDuration,
+                    delay: entryDelay,
+                    ease: "power2.out",
+                    onComplete: () => {
+                        // 入场动画完成后开始正常的浮动动画
+                        startBubbleFloatingAnimation(bubble, bubbleSize);
+                    }
+                });
+            }
+            enableBubbleHoverEffect();
+        }
+        
+        // 创建空泡泡
+        function createEmptyBubbles(count, galleryWidth, galleryHeight, maxBubbleSize, safeMargin, placedBubbles, sourceX, sourceY) {
+            for (let i = 0; i < count; i++) {
+                const bubble = document.createElement('div');
+                bubble.className = 'empty-bubble';
+                
+                // 添加彩虹效果泡泡
+                const rainbowChance = Math.random();
+                if (rainbowChance < 0.15) {
+                    bubble.classList.add('rainbow');
+                } else if (rainbowChance < 0.3) {
+                    bubble.classList.add('rainbow2');
+                }
+                
+                // 随机大小 (30-140px)
+                const bubbleSize = Math.round(30 + Math.random() * 110);
+                
+                // 设置泡泡大小
+                bubble.style.width = `${bubbleSize}px`;
+                bubble.style.height = `${bubbleSize}px`;
+                
+                // 泡泡透明度随机（更透明）
+                const opacity = 0.15 + Math.random() * 0.4;
+                bubble.style.opacity = "0"; // 初始透明度为0
+                
+                // 尝试找到一个不太重叠的位置
+                let attempts = 0;
+                let validPosition = false;
+                let x, y;
+                
+                // 最多尝试20次找位置
+                while (!validPosition && attempts < 20) {
+                    // 在安全区域内随机生成位置
+                    x = safeMargin + Math.random() * (galleryWidth - safeMargin * 2);
+                    y = safeMargin + Math.random() * (galleryHeight - safeMargin * 2);
+                    
+                    // 对于空泡泡，允许更多重叠
+                    validPosition = true;
+                    
+                    // 最小允许的距离（比普通泡泡要小）
+                    const minDistance = bubbleSize * 0.4;
+                    
+                    for (const placed of placedBubbles) {
+                        const distance = Math.sqrt(
+                            Math.pow(x - placed.x, 2) + 
+                            Math.pow(y - placed.y, 2)
+                        );
+                        
+                        // 如果距离太近，尝试新位置
+                        if (distance < minDistance + placed.size / 2) {
+                            validPosition = false;
+                            break;
+                        }
+                    }
+                    
+                    attempts++;
+                }
+                
+                // 即使找不到理想位置，也添加泡泡
+                if (!validPosition) {
+                    // 随机位置，不考虑重叠
+                    x = safeMargin + Math.random() * (galleryWidth - safeMargin * 2);
+                    y = safeMargin + Math.random() * (galleryHeight - safeMargin * 2);
+                }
+                
+                // 记录放置的泡泡（为了避免后续的泡泡完全重叠）
+                placedBubbles.push({
+                    x: x,
+                    y: y,
+                    size: bubbleSize * 0.7 // 减小影响范围，允许更多空泡泡
+                });
+                
+                // 泡泡的目标位置（最终位置）
+                const targetX = x - bubbleSize / 2;
+                const targetY = y - bubbleSize / 2;
+                
+                // 为了入场动画，设置初始位置为起始点
+                bubble.style.left = `${sourceX - bubbleSize / 2}px`;
+                bubble.style.top = `${sourceY - bubbleSize / 2}px`;
+                bubble.style.transform = "scale(0.1) rotate(0deg)"; // 初始时泡泡很小
+                
+                // 添加到画廊
+                bubbleGallery.appendChild(bubble);
+                
+                // 入场动画 - 从起点吹出到目标位置
+                const entryDelay = 0.05 + (i * 0.07) + (Math.random() * 0.3); // 错开每个泡泡的出现时间
+                const entryDuration = 0.8 + Math.random() * 1.7; // 0.8-2.5秒的入场时间
+                
+                // 使用GSAP动画库创建入场动画
+                gsap.to(bubble, {
+                    x: targetX - (sourceX - bubbleSize / 2), // 从起点到终点的x位移
+                    y: targetY - (sourceY - bubbleSize / 2), // 从起点到终点的y位移
+                    opacity: opacity,
+                    scale: 1,
+                    duration: entryDuration,
+                    delay: entryDelay,
+                    ease: "power2.out",
+                    onComplete: () => {
+                        // 入场动画完成后开始正常的浮动动画
+                        startEmptyBubbleAnimation(bubble, bubbleSize);
+                    }
+                });
+            }
+        }
+        
+        // 创建小泡泡生成器
+        function startTinyBubbleGenerator(sourceX, sourceY) {
+            let bubbleCount = 0;  // 计数已生成的小泡泡数量
+            const maxBubbles = 15;  // 最多生成15个小泡泡
+            
+            // 定义一个间隔，每隔一段时间产生一个小泡泡
+            const bubbleInterval = setInterval(() => {
+                // 如果不在泡泡房间或已达到最大数量，停止生成
+                if (!document.getElementById('bubble-room').classList.contains('active') || bubbleCount >= maxBubbles) {
+                    clearInterval(bubbleInterval);
+                    return;
+                }
+                
+                // 创建一个小泡泡
+                createTinyBubble(sourceX, sourceY);
+                bubbleCount++;
+                
+                // 如果达到最大数量，清除定时器
+                if (bubbleCount >= maxBubbles) {
+                    clearInterval(bubbleInterval);
+                }
+            }, 800 + Math.random() * 1200); // 0.8-2秒的随机间隔
+            
+            // 60秒后自动清除间隔，防止内存泄漏（作为备用安全措施）
+            setTimeout(() => {
+                clearInterval(bubbleInterval);
+            }, 60000);
+        }
+        
+        // 创建单个小泡泡
+        function createTinyBubble(sourceX, sourceY) {
+            const bubbleGallery = document.getElementById('bubbleGallery');
+            if (!bubbleGallery) return;
+            
+            // 创建泡泡元素
+            const bubble = document.createElement('div');
+            bubble.className = 'tiny-bubble';
+            
+            // 设置小泡泡尺寸 (15-25px)
+            const size = 15 + Math.random() * 10;
+            bubble.style.width = `${size}px`;
+            bubble.style.height = `${size}px`;
+            
+            // 设置初始位置
+            bubble.style.left = `${sourceX - size/2 + (Math.random() * 20 - 10)}px`;
+            bubble.style.top = `${sourceY - size/2}px`;
+            
+            // 添加到画廊
+            bubbleGallery.appendChild(bubble);
+            
+            // 随机上升路径
+            const endX = sourceX - size/2 + (Math.random() * 200 - 100); // 左右随机偏移
+            const endY = -100; // 上方消失
+            const duration = 4 + Math.random() * 3; // 4-7秒上升时间
+            
+            // 上升动画
+            gsap.to(bubble, {
+                x: endX - (sourceX - size/2),
+                y: endY - (sourceY - size/2),
+                opacity: 0,
+                duration: duration,
+                ease: "power1.in",
+                onComplete: () => {
+                    // 动画结束后移除泡泡
+                    if (bubble.parentNode) {
+                        bubble.parentNode.removeChild(bubble);
+                    }
+                }
+            });
+        }
+
+        // 单独提取出浮动动画逻辑以便重用
+        function startBubbleFloatingAnimation(bubble, bubbleSize) {
+            // 随机化动画 - 基于泡泡大小
+            // 小泡泡动得更快、幅度更大，大泡泡动得更慢
+            const sizeRatio = 260 / bubbleSize; // 大小比例系数
+            
+            // 垂直浮动参数
+            const animationRange = 5 + (Math.random() * 15) * Math.min(sizeRatio * 0.6, 1.8); // 小泡泡浮动更多
+            const duration = 1.5 + Math.random() * 1.5 + (bubbleSize / 260) * 2; // 大泡泡动画更慢
+            const delay = Math.random() * 0.5; // 较短的延迟
+            
+            // 添加垂直浮动动画
+            gsap.to(bubble, {
+                y: `+=${animationRange}`,
+                duration: duration,
+                ease: "sine.inOut",
+                yoyo: true,
+                repeat: -1,
+                delay: delay
+            });
+            
+            // 添加轻微的水平浮动动画
+            const horizontalRange = 2 + (Math.random() * 10) * Math.min(sizeRatio * 0.4, 1.5); // 小泡泡水平浮动更多
+            const horizontalDuration = 2.5 + Math.random() * 2 + (bubbleSize / 260) * 2.5;
+            
+            gsap.to(bubble, {
+                x: `+=${horizontalRange}`,
+                duration: horizontalDuration,
+                ease: "sine.inOut",
+                yoyo: true,
+                repeat: -1,
+                delay: delay * 0.7
+            });
+            
+            // 添加轻微的旋转动画 - 小泡泡旋转更明显
+            const rotationAmount = ((Math.random() * 6) - 3) * Math.min(sizeRatio * 0.7, 2);
+            
+            gsap.to(bubble, {
+                rotation: `+=${rotationAmount}`,
+                duration: duration * 1.3,
+                ease: "sine.inOut",
+                yoyo: true,
+                repeat: -1,
+                delay: delay * 0.4
+            });
+        }
+
+        // 空泡泡的动画效果
+        function startEmptyBubbleAnimation(bubble, bubbleSize) {
+            // 动画速度与泡泡大小成反比
+            const sizeRatio = 120 / bubbleSize;
+            
+            // 垂直浮动参数
+            const animationRange = 10 + (Math.random() * 20) * Math.min(sizeRatio, 1.5);
+            const duration = 2 + Math.random() * 2 + (bubbleSize / 120);
+            const delay = Math.random() * 0.5;
+            
+            // 添加垂直浮动动画
+            gsap.to(bubble, {
+                y: `+=${animationRange}`,
+                duration: duration,
+                ease: "sine.inOut",
+                yoyo: true,
+                repeat: -1,
+                delay: delay
+            });
+            
+            // 添加轻微的水平浮动动画
+            const horizontalRange = 5 + (Math.random() * 10) * Math.min(sizeRatio, 1.5);
+            const horizontalDuration = 3 + Math.random() * 3;
+            
+            gsap.to(bubble, {
+                x: `+=${horizontalRange}`,
+                duration: horizontalDuration,
+                ease: "sine.inOut",
+                yoyo: true,
+                repeat: -1,
+                delay: delay * 0.3
+            });
+            
+            // 添加透明度变化动画
+            gsap.to(bubble, {
+                opacity: "-=0.2",
+                duration: 3 + Math.random() * 2,
+                ease: "sine.inOut",
+                yoyo: true,
+                repeat: -1
+            });
+            
+            // 添加轻微的大小变化
+            gsap.to(bubble, {
+                scale: 0.85 + (Math.random() * 0.3),
+                duration: 4 + Math.random() * 3,
+                ease: "sine.inOut",
+                yoyo: true,
+                repeat: -1,
+                delay: delay * 0.5
+            });
+        }
+
+        // 图片展示
+        const imageContainer = document.getElementById('nailsContainer');
+        const mainImage = '2.png';
+
+        function createImage() {
+            imageContainer.innerHTML = '';
+            
+            const img = document.createElement('img');
+            img.src = mainImage;
+            img.alt = 'Main Image';
+            img.className = 'main-image';
+            
+            imageContainer.appendChild(img);
+        }
+
+        // 钟摆系统
+        const pendulum = document.getElementById('pendulum');
+        const pendulumText = document.getElementById('pendulum-text');
+        const pendulumRoom = document.getElementById('pendulum-room');
+        const pendulumSound = document.getElementById('pendulum-sound');
+        let currentMessageIndex = 0;
+        let lastDirection = 'left';
+        let isAnimating = false;
+        let animationFrameId = null;
+        let pendulumActive = false;
+
+        const messages = {
+            real: [
+                "我很难过",
+                "我很生气",
+                "我很开心",
+                "我很害怕",
+                "我需要你"
+            ],
+            mask: [
+                "我很好",
+                "没什么",
+                "我很开心",
+                "不用担心",
+                "你走吧"
+            ]
+        };
+
+        // 初始化显示第一条消息
+        function initPendulumText() {
+            if (pendulumText) {
+                pendulumText.textContent = messages.real[0];
+                pendulumText.style.display = "block";
+                pendulumText.style.visibility = "visible";
+                pendulumText.style.opacity = "1";
+                // 设置文字在钟摆后方
+                pendulumText.style.zIndex = "1";
+            }
+        }
+
+        function updatePendulumText(direction) {
+            if (!pendulumText || isAnimating || !pendulumActive) return;
+            
+            isAnimating = true;
+            const emotion = direction === 'left' ? 'real' : 'mask';
+            const currentMessages = messages[emotion];
+            
+            // 播放钟摆声音
+            if (pendulumSound && pendulumActive) {
+                pendulumSound.currentTime = 0;
+                pendulumSound.play().catch(e => console.log("音频播放失败:", e));
+            }
+            
+            // 文字淡出动画
+            gsap.to(pendulumText, {
+                opacity: 0,
+                duration: 0.3,
+                onComplete: () => {
+                    // 更新文字内容
+                    pendulumText.textContent = currentMessages[currentMessageIndex];
+                    
+                    // 设置文字位置，根据方向决定是在钟摆前方还是后方
+                    pendulumText.style.zIndex = direction === 'left' ? "1" : "3";
+                    
+                    // 文字淡入动画
+                    gsap.to(pendulumText, {
+                        opacity: 1,
+                        duration: 0.3,
+                        onComplete: () => {
+                            // 只在左摆时更新索引
+                            if (direction === 'left') {
+                                currentMessageIndex = (currentMessageIndex + 1) % currentMessages.length;
+                            }
+                            
+                            // 重置动画状态
+                            setTimeout(() => {
+                                isAnimating = false;
+                            }, 200);
+                        }
+                    });
+                }
+            });
+        }
+
+        // 钟摆动画主循环
+        function animate() {
+            if (!pendulum || !pendulumText || !pendulumActive) return;
+            
+            const transform = window.getComputedStyle(pendulum).transform;
+            const matrix = new DOMMatrix(transform);
+            const angle = Math.round(Math.atan2(matrix.m12, matrix.m11) * (180/Math.PI));
+            
+            const direction = angle < 0 ? 'left' : 'right';
+            
+            if (direction !== lastDirection && !isAnimating) {
+                updatePendulumText(direction);
+                lastDirection = direction;
+            }
+            
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        // 停止动画和音效
+        function stopAnimation() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            pendulumActive = false;
+            // 停止音效
+            if (pendulumSound) {
+                pendulumSound.pause();
+                pendulumSound.currentTime = 0;
+            }
+        }
+
+        // 只在钟摆房间激活时启动动画
+        function startPendulum() {
+            pendulumActive = true;
+            lastDirection = 'left';
+            isAnimating = false;
+            currentMessageIndex = 0;
+            initPendulumText();
+            animate();
+        }
+
+        // 页面初始化设置
+        document.addEventListener('DOMContentLoaded', () => {
+            // 钟摆页面导航和切换控制
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const targetRoom = item.dataset.room;
+                    
+                    // 停止钟摆动画和音效
+                    stopAnimation();
+                    
+                    // 更新导航状态
+                    document.querySelectorAll('.nav-item').forEach(nav => {
+                        nav.classList.remove('active');
+                    });
+                    item.classList.add('active');
+                    
+                    // 切换房间
+                    document.querySelectorAll('.room').forEach(room => {
+                        room.classList.remove('active');
+                        if (room.id === `${targetRoom}-room`) {
+                            room.classList.add('active');
+                            // 如果切换到钟摆房间，启动动画和音效
+                            if (targetRoom === 'pendulum') {
+                                startPendulum();
+                            }
+                        }
+                    });
+                });
+            });
+
+            // 情绪选择系统
+            document.querySelectorAll('.emotion-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    const emotion = option.dataset.emotion;
+                    currentMessageIndex = 0; // 重置索引
+                    // 切换到钟摆房间
+                    document.querySelector('.nav-item[data-room="pendulum"]').click();
+                });
+            });
+        });
+
+        // 3D导航模型
+        const navModels = {
+            infinity: {
+                create: (scene) => {
+                    const geometry = new THREE.TorusKnotGeometry(0.5, 0.2, 100, 16);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0x4ECDC4,
+                        shininess: 100,
+                        wireframe: true
+                    });
+                    return new THREE.Mesh(geometry, material);
+                }
+            },
+            bubble: {
+                create: (scene) => {
+                    const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0xFF6B6B,
+                        transparent: true,
+                        opacity: 0.8,
+                        wireframe: true
+                    });
+                    return new THREE.Mesh(geometry, material);
+                }
+            },
+            drawing: {
+                create: (scene) => {
+                    const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.1);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0xFF6B6B,
+                        wireframe: true
+                    });
+                    return new THREE.Mesh(geometry, material);
+                }
+            },
+            nails: {
+                create: (scene) => {
+                    const geometry = new THREE.OctahedronGeometry(0.5);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0x4ECDC4,
+                        wireframe: true
+                    });
+                    return new THREE.Mesh(geometry, material);
+                }
+            },
+            emotion: {
+                create: (scene) => {
+                    const geometry = new THREE.DodecahedronGeometry(0.5);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0xFF6B6B,
+                        wireframe: true
+                    });
+                    return new THREE.Mesh(geometry, material);
+                }
+            },
+            pendulum: {
+                create: (scene) => {
+                    const geometry = new THREE.TorusGeometry(0.5, 0.2, 16, 100);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0x4ECDC4,
+                        wireframe: true
+                    });
+                    return new THREE.Mesh(geometry, material);
+                }
+            }
+        };
+
+        // 初始化3D导航
+        function initNavModels() {
+            const navItems = document.querySelectorAll('.nav-item');
+            
+            navItems.forEach(item => {
+                const canvas = item.querySelector('canvas');
+                const room = item.dataset.room;
+                
+                // 创建场景
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer({
+                    canvas: canvas,
+                    alpha: true,
+                    antialias: true
+                });
+                renderer.setSize(60, 60);
+                
+                // 添加光源
+                const light = new THREE.PointLight(0xffffff, 1);
+                light.position.set(1, 1, 1);
+                scene.add(light);
+                
+                const ambientLight = new THREE.AmbientLight(0x404040);
+                scene.add(ambientLight);
+                
+                // 创建模型
+                const model = navModels[room].create(scene);
+                scene.add(model);
+                
+                camera.position.z = 2;
+                
+                // 动画循环
+                function animate() {
+                    requestAnimationFrame(animate);
+                    
+                    model.rotation.x += 0.01;
+                    model.rotation.y += 0.01;
+                    
+                    renderer.render(scene, camera);
+                }
+                
+                animate();
+                
+                // 添加交互效果
+                item.addEventListener('mouseenter', () => {
+                    gsap.to(model.rotation, {
+                        x: model.rotation.x + Math.PI,
+                        y: model.rotation.y + Math.PI,
+                        duration: 1,
+                        ease: "power2.inOut"
+                    });
+                });
+            });
+        }
+
+        // 绘画功能
+        function initDrawingRoom() {
+            const canvas = document.getElementById('drawing-canvas');
+            const ctx = canvas.getContext('2d');
+            const colorPicker = document.querySelector('.color-picker');
+            const brushSize = document.querySelector('.brush-size');
+            const clearBtn = document.getElementById('clear-btn');
+            const saveBtn = document.getElementById('save-btn');
+            
+            let isDrawing = false;
+            let lastX = 0;
+            let lastY = 0;
+            let savedCanvas = null;
+
+            // 设置画布大小
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                ctx.fillStyle = 'var(--background-dark)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            // 绘画事件
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+
+            function startDrawing(e) {
+                isDrawing = true;
+                [lastX, lastY] = [e.clientX, e.clientY];
+            }
+
+            function draw(e) {
+                if (!isDrawing) return;
+                
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(e.clientX, e.clientY);
+                ctx.strokeStyle = colorPicker.value;
+                ctx.lineWidth = brushSize.value;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+                
+                [lastX, lastY] = [e.clientX, e.clientY];
+            }
+
+            function stopDrawing() {
+                isDrawing = false;
+            }
+
+            // 清除画布
+            clearBtn.addEventListener('click', () => {
+                ctx.fillStyle = 'var(--background-dark)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            });
+
+            // 保存绘画
+            saveBtn.addEventListener('click', () => {
+                // 创建临时画布保存当前状态
+                savedCanvas = document.createElement('canvas');
+                savedCanvas.width = canvas.width;
+                savedCanvas.height = canvas.height;
+                const savedCtx = savedCanvas.getContext('2d');
+                savedCtx.drawImage(canvas, 0, 0);
+                
+                // 显示保存成功提示
+                const saveText = document.createElement('div');
+                saveText.textContent = '已保存';
+                saveText.style.position = 'fixed';
+                saveText.style.top = '20px';
+                saveText.style.left = '50%';
+                saveText.style.transform = 'translateX(-50%)';
+                saveText.style.color = '#fff';
+                saveText.style.padding = '10px 20px';
+                saveText.style.background = 'rgba(0, 0, 0, 0.7)';
+                saveText.style.borderRadius = '5px';
+                saveText.style.zIndex = '1000';
+                document.body.appendChild(saveText);
+                
+                // 2秒后移除提示
+                setTimeout(() => {
+                    document.body.removeChild(saveText);
+                }, 2000);
+            });
+        }
+
+        // 初始化
+        initHomeModel();
+        initNavModels();
+        createBubbles();
+        createImage();
+        initDrawingRoom();
+
+        // 响应窗口大小变化，重新创建泡泡
+        window.addEventListener('resize', () => {
+            createBubbles();
+        });
+
+        // 视频音量控制
+        const video = document.querySelector('.infinity-video');
+        const volumeSlider = document.querySelector('.volume-slider');
+        const volumeIcon = document.querySelector('.volume-icon');
+
+        volumeSlider.addEventListener('input', (e) => {
+            const volume = e.target.value;
+            video.volume = volume;
+            video.muted = volume === '0';
+            volumeIcon.textContent = volume === '0' ? '🔇' : '🔊';
+        });
+
+        volumeIcon.addEventListener('click', () => {
+            if (video.muted) {
+                video.muted = false;
+                video.volume = volumeSlider.value;
+                volumeIcon.textContent = '🔊';
+            } else {
+                video.muted = true;
+                volumeIcon.textContent = '🔇';
+            }
+        });
+
+        // 泡泡悬停动效：原地摆正并轻微放大，离开恢复
+        function enableBubbleHoverEffect() {
+            document.querySelectorAll('.bubble').forEach(bubble => {
+                bubble.addEventListener('mouseenter', function() {
+                    gsap.to(bubble, {
+                        scale: 1.12,
+                        rotate: 0,
+                        duration: 0.3,
+                        ease: 'power2.out',
+                        overwrite: 'auto'
+                    });
+                });
+                bubble.addEventListener('mouseleave', function() {
+                    // 恢复为GSAP动画的原始scale和rotate
+                    const current = bubble.style.getPropertyValue('--rotation') || '0deg';
+                    const rotation = parseFloat(current);
+                    gsap.to(bubble, {
+                        scale: 1,
+                        rotate: rotation,
+                        duration: 0.3,
+                        ease: 'power2.in',
+                        overwrite: 'auto'
+                    });
+                });
+            });
+        }
+        // 每次创建泡泡后调用
+        // ...在createMainBubbles最后一行加：enableBubbleHoverEffect();
+
+        // 情绪房间对话系统
+        function initEmotionDialog() {
+            const dialogContainers = document.querySelectorAll('.emotion-dialog-container');
+            const dialogOptions = document.querySelectorAll('.dialog-option');
+            const backButtons = document.querySelectorAll('.back-button');
+            const soundReal = document.getElementById('emotion-sound-real');
+            const soundMask = document.getElementById('emotion-sound-mask');
+            
+            // 辅助函数：显示指定对话框
+            function showDialog(dialog) {
+                if (dialog) {
+                    dialog.classList.add('active');
+                    setTimeout(() => {
+                        dialog.style.opacity = '1';
+                        dialog.style.transform = 'translateY(0)';
+                    }, 10);
+                }
+            }
+            
+            // 全屏化对话框并使其与背景完全融合
+            const emotionDialog = document.getElementById('emotionDialog');
+            emotionDialog.style.width = '100%';
+            emotionDialog.style.height = '100%';
+            emotionDialog.style.maxWidth = 'none';
+            emotionDialog.style.borderRadius = '0';
+            emotionDialog.style.border = 'none';
+            emotionDialog.style.boxShadow = 'none';
+            emotionDialog.style.background = 'transparent';
+            emotionDialog.style.backdropFilter = 'none';
+            
+            // 确保对话框内容仍保持美观布局
+            document.querySelectorAll('.dialog-header, .dialog-content, .dialog-options').forEach(el => {
+                el.style.maxWidth = '1200px';
+                el.style.margin = '0 auto';
+                el.style.background = 'transparent';
+                el.style.width = '100%';
+            });
+            
+            // 结果数据
+            const results = {
+                'workplace-real': {
+                    title: '真实表达',
+                    description: '你选择了坚持己见，表达了真实情绪。虽然这可能会带来一些冲突，但坦诚表达自己的疲惫和不满，有助于建立更健康的团队关系。适度的表达能够帮助他人理解你的处境，避免过度消耗。',
+                    animation: 'animation-workplace-real',
+                    sound: soundReal
+                },
+                'workplace-mask': {
+                    title: '情绪隐藏',
+                    description: '你选择了笑着答应，积极配合。这种应对方式虽然维持了表面和谐，但长期压抑自己的真实感受可能会导致更大的情绪爆发。建议在适当的时候，以建设性的方式表达你的想法和需求。',
+                    animation: 'animation-workplace-mask',
+                    sound: soundMask
+                },
+                'relationship-real': {
+                    title: '坦诚沟通',
+                    description: '你选择了当场指出问题。这种直接表达的方式虽然可能带来一时的尴尬，但有助于维护公平正义，也能让组员认识到自己的问题。适度的表达不满是维护自己权益的重要方式。',
+                    animation: 'animation-relationship-real',
+                    sound: soundReal
+                },
+                'relationship-mask': {
+                    title: '情绪压抑',
+                    description: '你选择了微笑鼓掌，保持沉默。虽然避免了直接冲突，但这种压抑可能会影响你的心理健康。记住，维护自己的劳动成果是正当的，适度的表达不满并不会破坏人际关系。',
+                    animation: 'animation-relationship-mask',
+                    sound: soundMask
+                },
+                'dorm-real': {
+                    title: '直接表达',
+                    description: '你选择了直接表达不满。虽然这种方式可能会引起一些冲突，但明确表达自己的需求和界限是维护良好宿舍关系的重要方式。适度的表达不满有助于建立相互尊重的宿舍氛围。',
+                    animation: 'animation-dorm-real',
+                    sound: soundReal
+                },
+                'dorm-mask': {
+                    title: '温和处理',
+                    description: '你选择了轻声提醒，保持平和。这种温和的方式虽然避免了直接冲突，但长期压抑自己的感受可能会影响心理健康。建议在适当的时候，以建设性的方式表达你的想法和需求。',
+                    animation: 'animation-dorm-mask',
+                    sound: soundMask
+                }
+            };
+            
+            // 清理所有动画相关的计时器和重置动画元素状态
+            function clearAllAnimationTimers() {
+                const animationElement = document.getElementById('result-animation');
+                if (animationElement) {
+                    // 清理粒子生成的intervals
+                    if (animationElement.dataset.intervalId) {
+                        clearInterval(parseInt(animationElement.dataset.intervalId));
+                        delete animationElement.dataset.intervalId;
+                    }
+                    
+                    // 清理圆形层的intervals
+                    const circleLayer = animationElement.querySelector('.circle-layer');
+                    if (circleLayer && circleLayer.dataset.intervalId) {
+                        clearInterval(parseInt(circleLayer.dataset.intervalId));
+                        delete circleLayer.dataset.intervalId;
+                    }
+                    
+                    // 重置动画元素的类名和可见性状态
+                    animationElement.className = 'result-animation';
+                    
+                    // 淡出动画效果
+                    animationElement.style.opacity = '0';
+                    
+                    // 延迟后完全隐藏，以确保淡出动画完成
+                    setTimeout(() => {
+                        animationElement.style.visibility = 'hidden';
+                    }, 1000);
+                }
+            }
+            
+            // 场景选择处理
+            dialogOptions.forEach(option => {
+                // 移除已有的事件监听器，防止重复绑定
+                option.removeEventListener('click', handleDialogOptionClick);
+                // 添加新的事件监听器
+                option.addEventListener('click', handleDialogOptionClick);
+            });
+            
+            // 处理对话选项点击的函数
+            function handleDialogOptionClick() {
+                console.log('选项点击:', this.dataset);
+                
+                // 添加选中效果
+                this.classList.add('selected');
+                
+                // 添加点击波纹效果
+                const ripple = document.createElement('div');
+                ripple.classList.add('ripple');
+                this.appendChild(ripple);
+                
+                ripple.style.left = '50%';
+                ripple.style.top = '50%';
+                
+                ripple.style.animation = 'ripple 0.6s linear';
+                setTimeout(() => ripple.remove(), 700);
+                
+                // 根据不同类型的选项执行不同操作
+                if (this.dataset.scenario) {
+                    // 是场景选择，显示对应场景
+                    const targetDialog = document.getElementById(`${this.dataset.scenario}Dialog`);
+                    
+                    // 淡出当前对话框
+                    fadeOutCurrentDialog(() => {
+                        // 淡入目标对话框
+                        showDialog(targetDialog);
+                    });
+                } else if (this.dataset.result) {
+                    // 是结果选择，显示结果
+                    const result = results[this.dataset.result];
+                    console.log('选择的结果:', this.dataset.result, result);
+                    
+                    // 设置结果内容
+                    document.getElementById('result-title').textContent = result.title;
+                    document.getElementById('result-description').textContent = result.description;
+                    
+                    // 获取动画元素引用
+                    const animationElement = document.getElementById('result-animation');
+                    console.log('动画元素:', animationElement);
+                    
+                    // 重置动画元素的类名，只保留基本类
+                    animationElement.className = 'result-animation';
+                    
+                    // 淡出当前对话框
+                    fadeOutCurrentDialog(() => {
+                        // 淡入结果对话框
+                        showDialog(document.getElementById('resultDialog'));
+                        
+                        // 清理之前的动画计时器
+                        clearAllAnimationTimers();
+                        
+                        // 先确保动画元素可见
+                        animationElement.style.visibility = 'visible';
+                        
+                        // 启动动画和音效
+                        setTimeout(() => {
+                            // 创建高级动画效果
+                            createEmotionAnimationEffects(this.dataset.result);
+                            
+                            // 添加激活类使其可见
+                            animationElement.classList.add('active');
+                            
+                            // 播放音效
+                            if (result.sound) {
+                                result.sound.currentTime = 0;
+                                result.sound.play().catch(e => {
+                                    console.log("音效播放失败:", e);
+                                });
+                            }
+                        }, 100);
+                    });
+                } else if (this.dataset.target) {
+                    // 是导航选项，显示目标对话框
+                    const targetDialog = document.getElementById(this.dataset.target);
+                    
+                    // 清理动画计时器
+                    clearAllAnimationTimers();
+                    
+                    // 淡出当前对话框
+                    fadeOutCurrentDialog(() => {
+                        // 淡入目标对话框
+                        showDialog(targetDialog);
+                        
+                        // 重置所有选项的选中状态
+                        dialogOptions.forEach(opt => {
+                            opt.classList.remove('selected');
+                        });
+                    });
+                }
+            }
+            
+            // 返回按钮处理
+            backButtons.forEach(button => {
+                // 移除已有的事件监听器，防止重复绑定
+                button.removeEventListener('click', handleBackButtonClick);
+                // 添加新的事件监听器
+                button.addEventListener('click', handleBackButtonClick);
+            });
+            
+            // 处理返回按钮点击的函数
+            function handleBackButtonClick() {
+                const targetDialog = document.getElementById(this.dataset.target);
+                
+                // 清理动画计时器
+                clearAllAnimationTimers();
+                
+                // 淡出当前对话框
+                fadeOutCurrentDialog(() => {
+                    // 淡入目标对话框
+                    showDialog(targetDialog);
+                    
+                    // 重置所有选项的选中状态
+                    dialogOptions.forEach(option => {
+                        option.classList.remove('selected');
+                    });
+                });
+            }
+            
+            // 辅助函数：淡出当前激活的对话框
+            function fadeOutCurrentDialog(callback) {
+                const activeDialog = document.querySelector('.emotion-dialog-container.active');
+                if (activeDialog) {
+                    activeDialog.style.opacity = '0';
+                    activeDialog.style.transform = 'translateY(20px)';
+                    
+                    setTimeout(() => {
+                        activeDialog.classList.remove('active');
+                        if (callback) callback();
+                    }, 300);
+                } else {
+                    if (callback) callback();
+                }
+            }
+        }
+
+        // 为情绪动画创建高级效果
+        function createEmotionAnimationEffects(resultType) {
+            const animationElement = document.getElementById('result-animation');
+            if (!animationElement) {
+                console.error('动画元素不存在!');
+                return;
+            }
+            
+            console.log('创建动画效果:', resultType);
+            
+            // 清除之前的动态元素
+            animationElement.innerHTML = '';
+            
+            // 确保使用一致的类名
+            if (results[resultType] && results[resultType].animation) {
+                animationElement.classList.add(results[resultType].animation);
+            }
+            
+            // 根据不同结果类型创建不同效果
+            switch (resultType) {
+                case 'workplace-real':
+                    // 添加粒子层
+                    const particleLayer = document.createElement('div');
+                    particleLayer.className = 'particle-layer';
+                    animationElement.appendChild(particleLayer);
+                    
+                    // 添加随机漂浮的小方块
+                    for (let i = 0; i < 20; i++) {
+                        createFloatingSquare(animationElement);
+                    }
+                    break;
+                    
+                case 'workplace-mask':
+                    // 添加波浪层
+                    const waveLayer = document.createElement('div');
+                    waveLayer.className = 'wave-layer';
+                    animationElement.appendChild(waveLayer);
+                    
+                    // 创建多层波浪
+                    for (let i = 0; i < 3; i++) {
+                        const additionalWave = document.createElement('div');
+                        additionalWave.className = 'wave-layer';
+                        additionalWave.style.opacity = `${0.3 - i * 0.05}`;
+                        additionalWave.style.animationDelay = `${i * 1.5}s`;
+                        additionalWave.style.transform = `scale(${1.5 + i * 0.5})`;
+                        animationElement.appendChild(additionalWave);
+                    }
+                    break;
+                    
+                case 'relationship-real':
+                    // 添加圆形层
+                    const circleLayer = document.createElement('div');
+                    circleLayer.className = 'circle-layer';
+                    animationElement.appendChild(circleLayer);
+                    
+                    // 动态创建扩散圆
+                    createExpandingCircles(circleLayer);
+                    break;
+                    
+                case 'relationship-mask':
+                    // 添加扫描层
+                    for (let i = 0; i < 3; i++) {
+                        const scanLayer = document.createElement('div');
+                        scanLayer.className = 'scan-layer';
+                        scanLayer.style.animationDelay = `${i * 1.3}s`;
+                        animationElement.appendChild(scanLayer);
+                    }
+                    break;
+                    
+                case 'dorm-real':
+                    // 添加粒子效果
+                    for (let i = 0; i < 25; i++) {
+                        const particle = document.createElement('div');
+                        particle.className = 'particle';
+                        particle.style.width = `${5 + Math.random() * 10}px`;
+                        particle.style.height = particle.style.width;
+                        particle.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                        particle.style.left = `${Math.random() * 100}%`;
+                        particle.style.bottom = '0';
+                        particle.style.animationDuration = `${5 + Math.random() * 5}s`;
+                        particle.style.animationDelay = `${Math.random() * 2}s`;
+                        animationElement.appendChild(particle);
+                    }
+                    break;
+                    
+                case 'dorm-mask':
+                    // 添加波纹效果
+                    for (let i = 0; i < 3; i++) {
+                        const ripple = document.createElement('div');
+                        ripple.style.position = 'absolute';
+                        ripple.style.width = '100%';
+                        ripple.style.height = '100%';
+                        ripple.style.top = '0';
+                        ripple.style.left = '0';
+                        ripple.style.border = `${i + 1}px solid rgba(255, 255, 255, 0.2)`;
+                        ripple.style.borderRadius = '50%';
+                        ripple.style.transform = 'scale(0)';
+                        ripple.style.opacity = '1';
+                        ripple.style.animation = `ripple ${5 + i}s ease-out infinite`;
+                        ripple.style.animationDelay = `${i * 0.5}s`;
+                        animationElement.appendChild(ripple);
+                    }
+                    break;
+                    
+                default:
+                    console.warn('未知的结果类型:', resultType);
+                    break;
+            }
+            
+            // 强制重绘
+            animationElement.offsetHeight;
+        }
+
+        // 清理所有动画相关的计时器和重置动画元素状态
+        function clearAllAnimationTimers() {
+            const animationElement = document.getElementById('result-animation');
+            if (!animationElement) return;
+            
+            // 清理粒子生成的intervals
+            if (animationElement.dataset.intervalId) {
+                clearInterval(parseInt(animationElement.dataset.intervalId));
+                delete animationElement.dataset.intervalId;
+            }
+            
+            // 清理圆形层的intervals
+            const circleLayer = animationElement.querySelector('.circle-layer');
+            if (circleLayer && circleLayer.dataset.intervalId) {
+                clearInterval(parseInt(circleLayer.dataset.intervalId));
+                delete circleLayer.dataset.intervalId;
+            }
+            
+            // 重置动画元素的类名和可见性状态
+            animationElement.className = 'result-animation';
+            animationElement.style.opacity = '0';
+            animationElement.style.visibility = 'hidden';
+            
+            // 清除内容
+            animationElement.innerHTML = '';
+        }
+
+        // 创建随机漂浮的小方块
+        function createFloatingSquare(container) {
+            const square = document.createElement('div');
+            const size = Math.random() * 10 + 5;
+            const posX = Math.random() * 100;
+            const delay = Math.random() * 5;
+            const duration = Math.random() * 10 + 10;
+            
+            square.style.position = 'absolute';
+            square.style.width = `${size}px`;
+            square.style.height = `${size}px`;
+            square.style.background = 'rgba(255, 255, 255, 0.2)';
+            square.style.left = `${posX}%`;
+            square.style.bottom = '0';
+            square.style.animation = `floatUp ${duration}s ease-in infinite`;
+            square.style.animationDelay = `${delay}s`;
+            square.style.transform = `rotate(${Math.random() * 360}deg)`;
+            
+            container.appendChild(square);
+        }
+
+        // 动态创建扩散圆
+        function createExpandingCircles(container) {
+            const createCircle = () => {
+                const circle = document.createElement('div');
+                circle.className = 'circle';
+                
+                const size = Math.max(window.innerWidth, window.innerHeight) * 0.3;
+                const x = Math.random() * window.innerWidth;
+                const y = Math.random() * window.innerHeight;
+                
+                circle.style.width = `${size}px`;
+                circle.style.height = `${size}px`;
+                circle.style.left = `${x}px`;
+                circle.style.top = `${y}px`;
+                circle.style.animationDuration = `${3 + Math.random() * 2}s`;
+                
+                container.appendChild(circle);
+                
+                // 动画结束后移除
+                setTimeout(() => {
+                    if (circle.parentNode === container) {
+                        container.removeChild(circle);
+                    }
+                }, 5000);
+            };
+            
+            // 立即创建一些圆
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => createCircle(), i * 300);
+            }
+            
+            // 持续创建新圆
+            const intervalId = setInterval(createCircle, 1000);
+            
+            // 存储intervalId以便清理
+            container.dataset.intervalId = intervalId;
+        }
+
+        // 添加额外的动画关键帧
+        const styleSheet = document.createElement('style');
+        styleSheet.innerHTML = `
+        @keyframes floatUp {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.7; }
+            100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+        }
+
+        @keyframes shrinkCircle {
+            0% { width: 300vw; height: 300vh; opacity: 0.8; }
+            100% { width: 0; height: 0; opacity: 0; }
+        }
+
+        @keyframes ripple {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(3); opacity: 0; }
+        }
+        `;
+        document.head.appendChild(styleSheet);
+
+        // 初始化功能代码集中调用
+        function initAllRooms() {
+            // 初始化导航栏
+            initNavModels();
+            
+            // 初始化各个房间的功能
+            initHomeModel();
+            createBubbles();
+            createImage();
+            initEmotionDialog(); // 确保调用情绪房间初始化
+            initDrawingRoom();
+        }
+
+        // 页面加载后执行初始化
+        document.addEventListener('DOMContentLoaded', initAllRooms);
+    </script>
+</body>
+</html>
